@@ -1,7 +1,7 @@
 # 8week-SQL-R-challenge
 This is inspired by Danny Ma's 8weekSQLchallenge. There are 8 real life case studies/projects that are often seen at work.
 
-I have tried to solve the case studies using my understanding of the problem andprogramming languages.
+I have tried to solve the case studies using my understanding of the problem and programming languages.
 
 Although it was supposed to be done only in SQL, I have also solved the problems in R (as evident by the repository name)
 
