@@ -1,0 +1,226 @@
+---
+title: "Diner"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(readr)
+search()
+```
+
+
+```{r}
+members <- read.csv("members.csv",fileEncoding="UTF-8-BOM")
+members
+```
+
+```{r}
+members <- members %>%
+  mutate(join_date=as.Date(join_date, format = "%d-%m-%Y"))
+members
+```
+
+```{r}
+menu <- read.csv("menu.csv",fileEncoding="UTF-8-BOM")
+menu
+```
+
+
+```{r}
+sales <- read.csv("sales.csv",fileEncoding="UTF-8-BOM")
+sales
+```
+```{r}
+sales <- sales %>%
+  mutate(order_date=as.Date(order_date, format = "%d-%m-%Y"))
+sales
+```
+
+
+```{r}
+sales_menu <- merge(sales,menu,by.x = "product_id",by.y = "product_id")
+head(sales_menu)
+```
+
+```{r}
+all <- merge(sales_menu,members,by.x = "customer_id",by.y = "customer_id")
+all
+```
+
+
+Question 1. What is the total amount each customer spent at the restaurant?
+
+```{r}
+library(dplyr)
+amount_spent <- sales_menu %>%
+  group_by(customer_id) %>%
+  summarise(total_amount = sum(price)) %>%
+  ungroup() %>%
+  arrange(desc(total_amount))
+amount_spent
+```
+Question 2. How many days has each customer visited the restaurant?
+
+```{r}
+no_of_visits <- sales %>%
+  group_by(customer_id) %>%
+  summarise(no = length(unique(order_date))) %>%
+  ungroup()
+no_of_visits
+```
+Question 3. What was the first item from the menu purchased by each customer?
+
+```{r}
+first_item <- sales_menu %>%
+  arrange(customer_id,order_date) %>%
+  group_by(customer_id) %>%
+  summarise(first_item = first(product_name))
+first_item
+
+first_item <- sales_menu %>%
+  arrange(customer_id,order_date) %>%
+  group_by(customer_id) %>%
+  filter(order_date == min(order_date)) %>%
+  ungroup() %>%
+  select(customer_id,product_name) 
+unique(first_item[,c("customer_id","product_name")])
+
+```
+Question 4. What is the most purchased item on the menu and how many times was it purchased by all customers?
+
+```{r}
+most_purchased <- sales_menu %>%
+  group_by(product_name) %>%
+  summarise(number = n()) %>%
+  ungroup() %>%
+  filter(number == max(number))
+most_purchased
+```
+
+Question 5. Which item was the most popular for each customer?
+
+```{r}
+most_pop <- sales_menu %>%
+  group_by(customer_id,product_name) %>%
+  summarise(ct = n()) %>%
+  filter(ct == max(ct)) %>%
+  ungroup() 
+most_pop
+```
+
+Question 6. Which item was purchased first by the customer after they became a member?
+
+```{r}
+
+first_purchase <- all %>%
+  filter(order_date >= join_date) %>%
+  arrange(customer_id,order_date) %>%
+  group_by(customer_id) %>%
+  filter(order_date == min(order_date)) %>% #incase more than 1 item was purchased in same order
+  ungroup() %>%
+  select(customer_id,order_date,product_name,join_date)
+first_purchase
+  
+```
+
+Question 7. Which item was purchased just before the customer became a member?
+
+```{r}
+last_purchase <- all %>%
+  filter(order_date < join_date) %>%
+  group_by(customer_id) %>%
+  filter(order_date == max(order_date)) %>% #incase more than 1 item was purchased in same order
+  ungroup() %>%
+  select(customer_id,order_date,product_name,join_date)
+last_purchase
+```
+Question 8. What is the total items and amount spent for each member before they became a member?
+
+```{r}
+items_spent <- all %>%
+  filter(order_date < join_date) %>%
+  group_by(customer_id) %>%
+  summarise(total_spend = sum(price),number_of_item = n()) %>%
+  ungroup() 
+items_spent
+```
+
+Question 9. If each $1 spent equates to 10 points and sushi has a 2x points multiplier - how many points would each customer have
+
+```{r}
+points <- sales_menu %>%
+  mutate(point = if_else(product_name == "sushi", 20*price,10*price )) %>%
+  group_by(customer_id) %>%
+  summarise(total_points = sum(point)) %>%
+  ungroup() %>%
+  arrange(desc(total_points))
+points
+```
+
+Question 10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi - how many points do customer A and B have at the end of January?
+
+```{r}
+new_points <- all %>%
+  filter(order_date < "2021-01-31") %>%
+  mutate(point = case_when((order_date >= join_date) & (order_date <join_date+7) ~ (20*price),
+                           product_name == "sushi"~ 20*price,
+                           TRUE ~ 10*price)) %>%
+  group_by(customer_id) %>%
+  summarise(total_points = sum(point)) %>%
+  ungroup() %>%
+  arrange(desc(total_points))
+new_points
+```
+
+
+Question 11. Recreate the following table
+customer_id	order_date	product_name	price	member
+A	2021-01-01	curry	15	N
+A	2021-01-01	sushi	10	N
+A	2021-01-07	curry	15	Y
+A	2021-01-10	ramen	12	Y
+A	2021-01-11	ramen	12	Y
+A	2021-01-11	ramen	12	Y
+B	2021-01-01	curry	15	N
+B	2021-01-02	curry	15	N
+B	2021-01-04	sushi	10	N
+B	2021-01-11	sushi	10	Y
+B	2021-01-16	ramen	12	Y
+B	2021-02-01	ramen	12	Y
+C	2021-01-01	ramen	12	N
+C	2021-01-01	ramen	12	N
+C	2021-01-07	ramen	12	N
+
+```{r}
+new <- left_join(sales,members,by="customer_id")
+new <- merge(new,menu,by.x = "product_id",by.y = "product_id")
+new <- new %>%
+  mutate(member = case_when((order_date >= join_date) ~ "Y",
+                            order_date<join_date ~ "N",
+                            TRUE ~ "N")) %>%
+  select(customer_id,order_date,product_name,price,member) %>%
+  arrange(customer_id,order_date,product_name)
+new
+```
+
+Question 12) Danny also requires further information about the ranking of customer products, but he purposely does not need the ranking for non-member purchases so he expects null ranking values for the records when customers are not yet part of the loyalty program.
+
+```{r}
+rank1 <- new %>%
+  filter(member=="Y") %>%
+  group_by(customer_id) %>%
+  mutate(ranks = rank(order_date, ties.method = "min"))
+rank2 <- new %>%
+  filter(member =="N") %>%
+  mutate(ranks = NULL)
+
+rank = rbind(rank1, rank2)
+rank <= rank %>%
+  arrange(customer_id)
+rank
+```
+
+
+
