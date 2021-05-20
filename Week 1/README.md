@@ -14,7 +14,7 @@ sales
 menu
 members
 
-![](erd.jpeg)
+Check out erd.jpg for the entity relationship diagram
 
 Questions 
 
