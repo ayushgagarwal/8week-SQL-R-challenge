@@ -15,3 +15,5 @@ Completed case studies
 - Week 1 Danny's Diner
 
 Link to the challenge https://8weeksqlchallenge.com/
+
+Work in Progress!
