@@ -16,4 +16,4 @@ Completed case studies
 
 Link to the challenge https://8weeksqlchallenge.com/
 
-Work in Progress!
+Work in Progress!!
